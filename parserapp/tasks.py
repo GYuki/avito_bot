@@ -5,7 +5,7 @@ import requests
 import datetime
 
 from parserapp import celery_app as app
-from parserapp.models import Category, CategorySubscriber
+from parserapp.models import Category, CategorySubscriber, Advert
 
 def find_subscribers(category_id):
     sub_arr = []
@@ -13,19 +13,29 @@ def find_subscribers(category_id):
     sub_arr = [s['chat_id'] for s in sub]
     return sub_arr
 
-price_check = lambda x: x.text if x is not None else 'Цена не указана'
-"""
-@app.on_after_finalize.connect
-def setup_periodic_tasks(sender, **kwargs):
-    categories = Category.objects.all()
-    print (categories)
-    for c in [0,1,2]:
-        sender.add_periodic_task(10.0, page_parser.s(c['id']), name=c['cmd'])
-"""
+def initialize_tasks():
+    schedule = {}
+    categories = Category.objects.all().values()
+    for i in categories:
+         schedule[i['name']] = {
+         'task': 'parserapp.tasks.page_parser',
+         'schedule': datetime.timedelta(seconds=20),
+         'args': (i['id'],)
+         }
+    app.conf.update(CELERYBEAT_SCHEDULE=schedule)
+
+def price_check(price):
+    try:
+        return price.text
+    except:
+        pass
+    return ""
+
+
+
 @app.task
 def page_parser(category_id):
-    #category_url = Category.objects.get(id=category).url
-    category_url='rabota'
+    category_url = Category.objects.get(id=category_id).url
     url = "https://www.avito.ru/rostov-na-donu/%s" %(category_url)
     req = requests.get(url)
     page_text = req.text.encode('utf8')
@@ -35,16 +45,20 @@ def page_parser(category_id):
         {
         'avito_id': r['id'][1:],
         'title': r.find('a', {'class': 'item-description-title-link'}).text,
-        'price': price_check(r.find('a', {'class': 'about '}))
+        'price': price_check(r.find('div', {'class': 'about '}))
         } for r in results]
-    print (ads)
+    filter_ads(ads, category_id)
 
-app.conf.update(
-    CELERYBEAT_SCHEDULE={
-        'parse-each-10-seconds': {
-            'task': 'parserapp.tasks.page_parser',
-            'schedule': datetime.timedelta(seconds=3),
-            'args': (1,)
-        },
-    },
-)
+def filter_ads(ads_dict, category_id):
+    avito_ids = [int(a['avito_id']) for a in ads_dict]
+    adverts = Advert.objects.filter(category_id=category_id, avito_id__in=avito_ids).values()
+    sent_ads = [a['avito_id'] for a in adverts]
+    res = list(set(avito_ids) - set(sent_ads))
+    for item in ads_dict:
+        if int(item['avito_id']) in res:
+            print (item['price'])
+            new_ad = Advert(avito_id=item['avito_id'], category_id=category_id,\
+                            title=item['title'], price=item['price'])
+            new_ad.save()
+
+initialize_tasks()

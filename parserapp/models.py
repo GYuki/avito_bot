@@ -10,6 +10,7 @@ class Chat(models.Model):
 class Category(models.Model):
     name = models.CharField(max_length=30)
     cmd = models.CharField(max_length=15)
+    url = models.CharField(max_length=30)
 
     def __str__(self):
         return self.name
@@ -21,3 +22,6 @@ class CategorySubscriber(models.Model):
 class Advert(models.Model):
     avito_id = models.IntegerField(unique=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    title = models.CharField(max_length=50, default='')
+    price = models.CharField(max_length=15)
+    is_sent = models.BooleanField(default=False)
