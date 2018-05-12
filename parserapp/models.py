@@ -7,7 +7,7 @@ class Chat(models.Model):
     telegram_chat_id = models.IntegerField()
 
 class Category(models.Model):
-    name = models.Charfield(max_length=30)
+    name = models.CharField(max_length=30)
 
 class CategorySubscriber(models.Model):
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE)
