@@ -28,6 +28,17 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 
+CELERY_BROKER_URL = 'amqp://seri:seri@localhost:5672//'
+
+CELERY_TASK_SERIALIZER = 'pickle'
+CELERY_RESULT_SERIALIZER = 'pickle'
+
+CELERY_ACCEPT_CONTENT = ['pickle']
+CELERY_TIMEZONE = 'Europe/Moscow'
+CELERY_ENABLE_UTC = True
+CELERY_IMPORTS = ('parserapp.tasks', )
+
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -37,6 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'djcelery',
     'parserapp'
 ]
 
