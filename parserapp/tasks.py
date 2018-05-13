@@ -47,7 +47,8 @@ def find_new_ads():
     for s in sub:
         text = '%s %s' %(s['title'], s['price'])
         send_message.delay(s['category__categorysubscriber__chat__telegram_chat_id'], text)
-    sub.update(is_sent=True)
+    Advert.objects.filter(is_sent=False).update(is_sent=True)
+    #sub.update(is_sent=True)
 
 
 @app.task
