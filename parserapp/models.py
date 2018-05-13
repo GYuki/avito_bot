@@ -22,6 +22,6 @@ class CategorySubscriber(models.Model):
 class Advert(models.Model):
     avito_id = models.IntegerField(unique=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
-    title = models.CharField(max_length=50, default='')
+    title = models.TextField(default='')
     price = models.CharField(max_length=15)
     is_sent = models.BooleanField(default=False)

@@ -8,7 +8,8 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import re
 
-from . import bot_settings
+from parserapp.bot_settings import categories_help
+from . import tasks
 
 
 def parse_command(message):
@@ -30,15 +31,13 @@ class HomePage(View):
         if category:
             try:
                 sub = CategorySubscriber.objects.get(chat_id=chat_obj[0].id, category_id=category.values()[0]['id'])
-                print("Вы уже подписаны на категорию %s" %(category.values()[0]['name']))
-                #send_message(вы уже подписаны!)
-            except:
+                tasks.send_message.delay(chat_id,  "Вы уже подписаны на категорию %s" %(category.values()[0]['name']))
+            except CategorySubscriber.DoesNotExist:
                 sub = CategorySubscriber(chat_id=chat_obj[0].id, category_id=category.values()[0]['id'])
                 sub.save()
-                print ("Вы подписались на категорию %s" %(category.values()[0]['name']))
-                #send_message(вы подписались!)
+                tasks.send_message.delay(chat_id, "Вы подписались на категорию %s" %(category.values()[0]['name']))
+
         else:
-            print(bot_settings.categories_help)
-            #send_message(Доступные команды)
+            tasks.send_message.delay(chat_id, categories_help)
 
         return JsonResponse({})

@@ -20,12 +20,12 @@ def initialize_tasks():
     for i in categories:
          schedule[i['name']] = {
          'task': 'parserapp.tasks.page_parser',
-         'schedule': datetime.timedelta(seconds=20),
+         'schedule': datetime.timedelta(seconds=60),
          'args': (i['id'],)
          }
     schedule['telegram_sender'] = {
         'task': 'parserapp.tasks.find_new_ads',
-         'schedule': datetime.timedelta(seconds=20),
+         'schedule': datetime.timedelta(seconds=60),
          'args': None
     }
     app.conf.update(CELERYBEAT_SCHEDULE=schedule)
@@ -43,9 +43,9 @@ def find_new_ads():
     category__categorysubscriber__chat_id__isnull=False)\
     .values('category__categorysubscriber__chat__telegram_chat_id', \
     'title', 'price')
-    #print (sub)
+
     for s in sub:
-        text = '%s %s' %(s['title'][2:-2], s['price'][1:])
+        text = '%s %s' %(s['title'], s['price'])
         send_message.delay(s['category__categorysubscriber__chat__telegram_chat_id'], text)
     sub.update(is_sent=True)
 
@@ -61,18 +61,34 @@ def send_message(chat_id, text):
 
 @app.task
 def page_parser(category_id):
+    ads = []
+    headers = {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0'}
     category_url = Category.objects.get(id=category_id).url
-    url = "https://www.avito.ru/rostov-na-donu/%s" %(category_url)
-    req = requests.get(url)
+    url = "https://www.avito.ru/rostov-na-donu/%s?s=104&view=list" %(category_url)
+    req = requests.get(url, headers=headers)
     page_text = req.text.encode('utf8')
     soup = BeautifulSoup(page_text)
     results = soup.find_all('div', {'class': 'js-catalog-item-enum'})
-    ads = [
-        {
-        'avito_id': r['id'][1:],
-        'title': r.find('a', {'class': 'item-description-title-link'}).text,
-        'price': price_check(r.find('div', {'class': 'about '}))
-        } for r in results]
+    for item in results:
+        price_class = item.find('div', {'class': 'price'})
+        price = price_class.find('span', {'class': 'c-2'})
+
+        if price:
+            price_text = price.text
+        else:
+            price_text = price_class.find('p').text
+
+        title_class = item.find('div', {'class': 'description-title'}).find('a')
+        title_text = title_class['title']
+        title_id = title_class['id']
+        title_href = "https://www.avito.ru/" + title_class['href']
+
+        ads.append({
+        'avito_id': title_class['id'],
+        'title': "%s. Ссылка - %s" %(title_text, title_href),
+        'price': price_text
+        })
+
     filter_ads(ads, category_id)
 
 def filter_ads(ads_dict, category_id):
