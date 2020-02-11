@@ -6,7 +6,7 @@ bs4==0.0.1
 celery==4.1.0
 certifi==2018.4.16
 chardet==3.0.4
-Django==2.0
+Django==2.2.10
 django-celery==3.2.2
 idna==2.6
 kombu==4.1.0
